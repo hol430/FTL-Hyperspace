@@ -486,6 +486,12 @@ HOOK_METHOD(Upgrades, OnInit, (ShipManager *ship) -> void)
     }
 }
 
+HOOK_METHOD(InfoBox, constructor, () -> void)
+{
+    super();
+    maxPower = 0;
+}
+
 HOOK_METHOD(Upgrades, MouseMove, (int mX, int mY) -> void)
 {
     LOG_HOOK("HOOK_METHOD -> Upgrades::MouseMove -> Begin (CustomUpgrades.cpp)\n")
