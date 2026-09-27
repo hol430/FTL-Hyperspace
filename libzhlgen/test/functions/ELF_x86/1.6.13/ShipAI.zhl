@@ -4,6 +4,14 @@ cleanup __cdecl void ShipAI::constructor(ShipAI *this, bool player);
 cleanup __cdecl void ShipAI::SetStalemate(ShipAI *this, bool stalemate);
 "5589e557565383ec4c8b750c8b5d0889f084c0":
 cleanup __cdecl void ShipAI::OnLoop(ShipAI *this, bool hostile);
+"5383ec188b5c242080bba800000000":
+cleanup __cdecl bool ShipAI::RequiredEvac(ShipAI *this);
+"8b5424048b028b88cc00000031c085c97e1e398aac000000":
+cleanup __cdecl bool ShipAI::Surrender(ShipAI *this);
+"8b5424048b028b88cc00000031c085c97e3e398ab0000000":
+cleanup __cdecl bool ShipAI::Escape(ShipAI *this);
+"5589e557565383ec3c8b7d080fb6450c":
+cleanup __cdecl void ShipAI::CheckPowerLevels(ShipAI *this, bool hostile);
 "565383ec148b7424248b5c24208b4604":
 cleanup __cdecl std::pair<int, int> ShipAI::GetTeleportCommand(ShipAI *this);
 "5589e55383ec248b????8b4304":

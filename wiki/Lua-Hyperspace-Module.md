@@ -453,6 +453,23 @@ Hyperspace.ships.player:DamageBeam(Hyperspace.ships.player:GetRandomRoomCenter()
    - I do not know if this is safe to call
 - `void :PrepareSuperDrones()`
    - I do not know if this is safe to call
+- `void :SetCloaked(bool cloaked)`
+- `void :SetTarget(ShipManager *target)`
+- `void :ManipulateDoors(int roomId, bool open)`
+- `void :ManipulateAllDoors(bool open)`
+- `bool :PowerWeapon(ProjectileFactory *weapon, bool userDriven, bool force)`
+- `bool :DePowerWeapon(ProjectileFactory *weapon, bool userDriven)`
+- `bool :PowerDrone(Drone *drone, int roomId, bool userDriven, bool force)`
+- `bool :DePowerDrone(Drone *drone, bool userDriven)`
+- `bool :CommandCrewMoveRoom(CrewMember *crew, int roomId)`
+- `float :GetOxygenLevel(int roomId)`
+- `std::vector<float> :GetOxygenLevels()`
+- `std::vector<Repairable*> :GetFires(int roomId)`
+- `std::vector<ShipSystem*> :GetSystemList()`
+- `void :ShutdownAllPower()`
+- `bool :IncreaseSystemPower(int systemId)`
+- `bool :InitiateTeleport(int targetRoom, Defines.TeleportCommand command)`
+   - Starts a send or recall on the `CompleteShip` which owns this manager. Returns `false` if the manager is not part of the current world.
 - `void :RemoveItem(std::string name, bool checkCargo=false)`
    - Remove an item by name (equivalent to removing via an event).
    - checkCargo indicates if items will be removed from cargo if not present in weapon/drone system.
@@ -941,6 +958,9 @@ Accessed via `ShipSystem`'s `.extend` field
 
 **Extends [ShipSystem](#ShipSystem)**
 
+### Methods
+- `void :SetTurnedOn(bool turnedOn)`
+
 ### Fields
 - `bool` `.bTurnedOn`
 - [`TimerHelper`](#TimerHelper) `.timer`
@@ -949,6 +969,9 @@ Accessed via `ShipSystem`'s `.extend` field
 ## BatterySystem
 
 **Extends [ShipSystem](#ShipSystem)**
+
+### Methods
+- `void :SetTurnedOn(bool turnedOn)`
 
 ### Fields
 - `bool` `.bTurnedOn`
@@ -960,6 +983,8 @@ Accessed via `ShipSystem`'s `.extend` field
 **Extends [ShipSystem](#ShipSystem)**
 
 ### Methods
+- `void :QueueMindControl(std::vector<CrewMember*> *crew, int roomId, int shipId)`
+- `void :InitiateMindControl()`
 - `void :SetArmed(int armed)`
 - `void :SetHackingLevel(int hackingLevel)`
 
@@ -980,6 +1005,11 @@ Accessed via `ShipSystem`'s `.extend` field
 
 ### Methods
 - `void :BlowHackingDrone()`
+- `bool :CanHack()`
+- `bool :CanPulse()`
+- `void :InitiatePulse()`
+- `void :StartHacking(ShipSystem *system)`
+- `void :StopHacking()`
 
 ### Fields
 - `bool` `.bHacking`
@@ -1043,6 +1073,9 @@ Accessed via `ShipSystem`'s `.extend` field
 **Extends [ShipSystem](#ShipSystem)**
 
 ### Methods
+- `bool :PowerWeapon(ProjectileFactory *weapon, bool userDriven, bool force)`
+- `bool :DePowerWeapon(ProjectileFactory *weapon, bool userDriven)`
+- [`ProjectileFactory*`](#projectilefactory) `:GetWeapon(int slot)`
 - [`ProjectileFactory*`](#projectilefactory) `:RemoveWeapon(int slot)`
 - `void :SetBonusPower(int amount, int permanentPower)`
 
@@ -1067,6 +1100,72 @@ Accessed via `ShipSystem`'s `.extend` field
 - [`ProjectileFactory*`](#projectilefactory) `.projectileFactory`
 - [`Targetable*`](#targetable) `.target`
 - `bool` `.bCloaked`
+
+## ShipAI
+
+The top-level vanilla ship controller passed to the `SHIP_AI_*` internal events.
+
+### Methods
+- `void :CancelEscape()`
+- `void :RestartStalemate()`
+- `void :SetEscapeThreshold(int amount)`
+- `void :SetEscapeTimer(float value)`
+- `void :SetEvacRequest(int value)`
+- `void :SetStalemate(bool stalemate)`
+- `void :SetSurrenderThreshold(int amount)`
+
+### Fields
+- [`ShipManager*`](#shipmanager) `.ship`
+- [`ShipManager*`](#shipmanager) `.target`
+- [`CrewAI`](#crewai) `.crewAI`
+- [`CombatAI`](#combatai) `.combatAI`
+- `bool` `.playerShip`
+- `bool` `.surrendered`
+- `bool` `.escaping`
+- `bool` `.destroyed`
+- `int` `.surrenderThreshold`
+- `int` `.escapeThreshold`
+- `float` `.escapeTimer`
+- `int` `.lastMaxPower`
+- `int` `.iTeleportRequest`
+- `int` `.iTeleportTarget`
+- `int` `.brokenSystems`
+- `int` `.boardingAi`
+- `int` `.iCrewNeeded`
+- `bool` `.bStalemateTrigger`
+- `float` `.fStalemateTimer`
+- `int` `.lastHealth`
+- `bool` `.bBoss`
+- `int` `.iTimesTeleported`
+
+## CrewAI
+
+The vanilla crew controller passed to the `CREW_AI_*` internal events.
+
+### Fields
+- [`ShipManager*`](#shipmanager) `.ship`
+- `bool` `.bAIon`
+- `bool` `.bAirlockRequested`
+- `bool` `.bMedbayRequested`
+- `bool` `.bHurtCrew`
+- `bool` `.bCalmShip`
+- [`std::vector<CrewMember*>`](#crewmember) `.crewList`
+- [`std::vector<CrewMember*>`](#crewmember) `.intruderList`
+- `int` `.iTeleportRequest`
+- `bool` `.bUrgentTeleport`
+
+## CombatAI
+
+The vanilla combat controller passed to the `COMBAT_AI_*` internal events.
+
+### Fields
+- [`ShipManager*`](#shipmanager) `.target`
+- [`std::vector<ProjectileFactory*>`](#projectilefactory) `.weapons`
+- [`std::vector<SpaceDrone*>`](#spacedrone) `.drones`
+- `int` `.stance`
+- `std::vector<int>` `.system_targets`
+- `bool` `.bFiringWhileCloaked`
+- [`ShipManager*`](#shipmanager) `.self`
 
 ## EngineSystem
 
@@ -1098,6 +1197,8 @@ No additional items over base `ShipSystem`
 
 ### Methods
 - `bool :DePowerDrone(Drone* drone, bool unknown)`
+- `bool :PowerDrone(Drone* drone, bool userDriven, bool force)`
+- [`Drone*`](#drone) `:GetDrone(int slot)`
 - `void :RemoveDrone(int slot)`
 - `void :SetBonusPower(int amount, int permanentPower)`
 
@@ -3047,6 +3148,10 @@ Accessed via `Hyperspace.CustomAugmentManager.GetInstance()`
 - [`Projectile*`](#Projectile) `:GetProjectile()`
 - `bool :IsChargedGoal()`
 - `int :NumTargetsRequired()`
+- `void :SetAutoFire(bool autoFire)`
+- `void :ClearAiming()`
+- `void :ClearProjectiles()`
+- `bool :ReadyToFire()`
 - `void :SetCooldownModifier(float mod)`
 - `void :SetCurrentShip(Targetable *ship)`
 - `void :SetHacked(int hacked)`
@@ -3195,6 +3300,9 @@ Accessed via `Hyperspace.CustomAugmentManager.GetInstance()`
 
 ### Methods
 - `bool :ApplyDamage(float amount)`
+- `void :Open()`
+- `void :Close()`
+- `void :Manipulate(bool open)`
 
 ### Fields
 - [`Selectable`](#selectable) `._selectable`

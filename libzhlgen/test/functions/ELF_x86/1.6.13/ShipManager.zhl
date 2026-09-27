@@ -319,3 +319,5 @@ struct ShipManager depends (PowerManager, ShieldPower)
 	bool CanFitCrew(const std::string& crewName);
 	bool CanFitSubsystem(int systemId);
 }};
+"8b4424048b4c24088b9000040000837a28ff":
+cleanup __cdecl void ShipManager::SetCloaked(ShipManager *this, bool val);

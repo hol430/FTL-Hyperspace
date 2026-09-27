@@ -47,6 +47,9 @@ void LuaLibScript::LoadTypeInfo()
     types.pChoiceBox = SWIG_TypeQuery(this->m_Lua, "ChoiceBox *");
     types.pLocation = SWIG_TypeQuery(this->m_Lua, "Location *");
     types.pLocationEvent = SWIG_TypeQuery(this->m_Lua, "LocationEvent *");
+    types.pShipAI = SWIG_TypeQuery(this->m_Lua, "ShipAI *");
+    types.pCrewAI = SWIG_TypeQuery(this->m_Lua, "CrewAI *");
+    types.pCombatAI = SWIG_TypeQuery(this->m_Lua, "CombatAI *");
 
     types.pDrone = SWIG_TypeQuery(this->m_Lua, "Drone *");
     types.pDroneTypes[DRONE_DEFENSE] = SWIG_TypeQuery(this->m_Lua, "DefenseDrone *");

@@ -1657,6 +1657,22 @@ We can expose them once the root cause is identified and the crash is fixed.
 %rename("%s") ShipManager::ModifyScrapCount;
 %rename("%s") ShipManager::PrepareSuperBarrage;
 %rename("%s") ShipManager::PrepareSuperDrones;
+%rename("%s") ShipManager::SetCloaked;
+%rename("%s") ShipManager::SetTarget;
+%rename("%s") ShipManager::ManipulateDoors;
+%rename("%s") ShipManager::ManipulateAllDoors;
+%rename("%s") ShipManager::PowerWeapon;
+%rename("%s") ShipManager::DePowerWeapon;
+%rename("%s") ShipManager::PowerDrone;
+%rename("%s") ShipManager::DePowerDrone;
+%rename("%s") ShipManager::CommandCrewMoveRoom;
+%rename("%s") ShipManager::GetOxygenLevel;
+%rename("%s") ShipManager::GetOxygenLevels;
+%rename("%s") ShipManager::GetFires;
+%rename("%s") ShipManager::GetSystemList;
+%rename("%s") ShipManager::ShutdownAllPower;
+%rename("%s") ShipManager::IncreaseSystemPower;
+%rename("%s") ShipManager::InitiateTeleport;
 %rename("%s") ShipManager::RemoveItem;
 %extend ShipManager {
     void RemoveItem(const std::string& item, bool checkCargo = false)
@@ -1665,6 +1681,27 @@ We can expose them once the root cause is identified and the crash is fixed.
         g_checkCargo = checkCargo;
         $self->RemoveItem(item);
         g_checkCargo = old_checkCargo;
+    }
+
+    bool InitiateTeleport(int targetRoom, int command)
+    {
+        if (command < 0 || command > 2) return false;
+        WorldManager *world = G_->GetWorld();
+        CompleteShip *completeShip = nullptr;
+        if (world && world->playerShip)
+        {
+            if (world->playerShip->shipManager == $self)
+            {
+                completeShip = world->playerShip;
+            }
+            else if (world->playerShip->enemyShip && world->playerShip->enemyShip->shipManager == $self)
+            {
+                completeShip = world->playerShip->enemyShip;
+            }
+        }
+        if (!completeShip) return false;
+        completeShip->InitiateTeleport(targetRoom, command);
+        return true;
     }
 }
 %rename("%s") ShipManager::ResetScrapLevel;
@@ -1987,6 +2024,7 @@ We can expose them once the root cause is identified and the crash is fixed.
 %nodefaultctor CloakingSystem;
 %nodefaultdtor CloakingSystem;
 %rename("%s") CloakingSystem;
+%rename("%s") CloakingSystem::SetTurnedOn;
 %rename("%s") CloakingSystem::bTurnedOn;
 %rename("%s") CloakingSystem::timer;
 %rename("%s") CloakingSystem::soundeffect;
@@ -1994,6 +2032,7 @@ We can expose them once the root cause is identified and the crash is fixed.
 %nodefaultctor BatterySystem;
 %nodefaultdtor BatterySystem;
 %rename("%s") BatterySystem;
+%rename("%s") BatterySystem::SetTurnedOn;
 %rename("%s") BatterySystem::bTurnedOn;
 %rename("%s") BatterySystem::soundeffect;
 
@@ -2002,6 +2041,8 @@ We can expose them once the root cause is identified and the crash is fixed.
 %rename("%s") MindSystem;
 %rename("%s") MindSystem::SetArmed;
 %rename("%s") MindSystem::SetHackingLevel;
+%rename("%s") MindSystem::QueueMindControl;
+%rename("%s") MindSystem::InitiateMindControl;
 %rename("%s") MindSystem::controlTimer;
 %rename("%s") MindSystem::bCanUse;
 %rename("%s") MindSystem::iArmed;
@@ -2028,6 +2069,11 @@ We can expose them once the root cause is identified and the crash is fixed.
 %nodefaultdtor HackingSystem;
 %rename("%s") HackingSystem;
 %rename("%s") HackingSystem::BlowHackingDrone;
+%rename("%s") HackingSystem::CanHack;
+%rename("%s") HackingSystem::CanPulse;
+%rename("%s") HackingSystem::InitiatePulse;
+%rename("%s") HackingSystem::StartHacking;
+%rename("%s") HackingSystem::StopHacking;
 %rename("%s") HackingSystem::bHacking;
 %rename("%s") HackingSystem::drone;
 %rename("%s") HackingSystem::bBlocked;
@@ -2098,6 +2144,9 @@ We can expose them once the root cause is identified and the crash is fixed.
 %rename("%s") WeaponSystem;
 %rename("%s") WeaponSystem::RemoveWeapon;
 %rename("%s") WeaponSystem::SetBonusPower;
+%rename("%s") WeaponSystem::PowerWeapon;
+%rename("%s") WeaponSystem::DePowerWeapon;
+%rename("%s") WeaponSystem::GetWeapon;
 %rename("%s") WeaponSystem::target;
 %rename("%s") WeaponSystem::weapons;
 %rename("%s") WeaponSystem::weaponsTrashList;
@@ -2114,6 +2163,8 @@ We can expose them once the root cause is identified and the crash is fixed.
 %nodefaultdtor DroneSystem;
 %rename("%s") DroneSystem;
 %rename("%s") DroneSystem::DePowerDrone;
+%rename("%s") DroneSystem::PowerDrone;
+%rename("%s") DroneSystem::GetDrone;
 %rename("%s") DroneSystem::RemoveDrone;
 %rename("%s") DroneSystem::SetBonusPower;
 %rename("%s") DroneSystem::drones;
@@ -2138,6 +2189,64 @@ We can expose them once the root cause is identified and the crash is fixed.
 %rename("%s") ArtillerySystem::projectileFactory;
 %rename("%s") ArtillerySystem::target;
 %rename("%s") ArtillerySystem::bCloaked;
+
+%nodefaultctor ShipAI;
+%nodefaultdtor ShipAI;
+%rename("%s") ShipAI;
+%rename("%s") ShipAI::CancelEscape;
+%rename("%s") ShipAI::RestartStalemate;
+%rename("%s") ShipAI::SetEscapeThreshold;
+%rename("%s") ShipAI::SetEscapeTimer;
+%rename("%s") ShipAI::SetEvacRequest;
+%rename("%s") ShipAI::SetStalemate;
+%rename("%s") ShipAI::SetSurrenderThreshold;
+%rename("%s") ShipAI::ship;
+%rename("%s") ShipAI::target;
+%rename("%s") ShipAI::crewAI;
+%rename("%s") ShipAI::combatAI;
+%rename("%s") ShipAI::playerShip;
+%rename("%s") ShipAI::surrendered;
+%rename("%s") ShipAI::escaping;
+%rename("%s") ShipAI::destroyed;
+%rename("%s") ShipAI::surrenderThreshold;
+%rename("%s") ShipAI::escapeThreshold;
+%rename("%s") ShipAI::escapeTimer;
+%rename("%s") ShipAI::lastMaxPower;
+%rename("%s") ShipAI::iTeleportRequest;
+%rename("%s") ShipAI::iTeleportTarget;
+%rename("%s") ShipAI::brokenSystems;
+%rename("%s") ShipAI::boardingAi;
+%rename("%s") ShipAI::iCrewNeeded;
+%rename("%s") ShipAI::bStalemateTrigger;
+%rename("%s") ShipAI::fStalemateTimer;
+%rename("%s") ShipAI::lastHealth;
+%rename("%s") ShipAI::bBoss;
+%rename("%s") ShipAI::iTimesTeleported;
+
+%nodefaultctor CrewAI;
+%nodefaultdtor CrewAI;
+%rename("%s") CrewAI;
+%rename("%s") CrewAI::ship;
+%rename("%s") CrewAI::bAIon;
+%rename("%s") CrewAI::bAirlockRequested;
+%rename("%s") CrewAI::bMedbayRequested;
+%rename("%s") CrewAI::bHurtCrew;
+%rename("%s") CrewAI::bCalmShip;
+%rename("%s") CrewAI::crewList;
+%rename("%s") CrewAI::intruderList;
+%rename("%s") CrewAI::iTeleportRequest;
+%rename("%s") CrewAI::bUrgentTeleport;
+
+%nodefaultctor CombatAI;
+%nodefaultdtor CombatAI;
+%rename("%s") CombatAI;
+%rename("%s") CombatAI::target;
+%rename("%s") CombatAI::weapons;
+%rename("%s") CombatAI::drones;
+%rename("%s") CombatAI::stance;
+%rename("%s") CombatAI::system_targets;
+%rename("%s") CombatAI::bFiringWhileCloaked;
+%rename("%s") CombatAI::self;
 
 //%nodefaultctor ShipSystem;
 //%nodefaultdtor ShipSystem;
@@ -2422,6 +2531,10 @@ We can expose them once the root cause is identified and the crash is fixed.
 %rename("%s") ProjectileFactory::SetCooldownModifier;
 %rename("%s") ProjectileFactory::SetCurrentShip;
 %rename("%s") ProjectileFactory::SetHacked;
+%rename("%s") ProjectileFactory::SetAutoFire;
+%rename("%s") ProjectileFactory::ClearAiming;
+%rename("%s") ProjectileFactory::ClearProjectiles;
+%rename("%s") ProjectileFactory::ReadyToFire;
 //%rename("%s") ProjectileFactory::SpendMissiles;
 //%rename("%s") ProjectileFactory::StringToWeapon;
 %rename("%s") ProjectileFactory::cooldown;
@@ -2748,6 +2861,9 @@ We can expose them once the root cause is identified and the crash is fixed.
 %rename("%s") Door;
 
 %rename("%s") Door::ApplyDamage;
+%rename("%s") Door::Open;
+%rename("%s") Door::Close;
+%rename("%s") Door::Manipulate;
 
 %rename("%s") Door::_selectable;
 %rename("%s") Door::iRoom1;

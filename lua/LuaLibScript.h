@@ -156,6 +156,9 @@ class LuaLibScript
             swig_type_info *pChoiceBox;
             swig_type_info *pLocation;
             swig_type_info *pLocationEvent;
+            swig_type_info *pShipAI;
+            swig_type_info *pCrewAI;
+            swig_type_info *pCombatAI;
 
             swig_type_info *pShipSystemTypes[21];
             swig_type_info *pDrone;

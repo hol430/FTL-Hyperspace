@@ -7,6 +7,78 @@
 
 /** All the hook code for the various InternalEvents belongs here **/
 
+enum class AIPhase
+{
+    SHIP,
+    POWER,
+    CREW,
+    COMBAT,
+    WEAPONS,
+    MIND,
+    ARTILLERY
+};
+
+struct AIContextFrame
+{
+    AIPhase phase;
+    ShipAI *shipAI;
+    CrewAI *crewAI;
+    CombatAI *combatAI;
+    ArtillerySystem *artillery;
+};
+
+static thread_local std::vector<AIContextFrame> g_aiContextStack;
+static thread_local int g_aiActionCallbackDepth = 0;
+
+class ScopedAIContext
+{
+public:
+    ScopedAIContext(AIPhase phase, ShipAI *shipAI = nullptr, CrewAI *crewAI = nullptr,
+                    CombatAI *combatAI = nullptr, ArtillerySystem *artillery = nullptr)
+    {
+        g_aiContextStack.push_back({phase, shipAI, crewAI, combatAI, artillery});
+    }
+
+    ~ScopedAIContext()
+    {
+        g_aiContextStack.pop_back();
+    }
+};
+
+class ScopedAIActionCallback
+{
+public:
+    ScopedAIActionCallback() { ++g_aiActionCallbackDepth; }
+    ~ScopedAIActionCallback() { --g_aiActionCallbackDepth; }
+};
+
+static ShipAI *GetCurrentShipAI()
+{
+    for (auto it = g_aiContextStack.rbegin(); it != g_aiContextStack.rend(); ++it)
+    {
+        if (it->phase == AIPhase::SHIP && it->shipAI) return it->shipAI;
+    }
+    return nullptr;
+}
+
+static CrewAI *GetCurrentCrewAI()
+{
+    for (auto it = g_aiContextStack.rbegin(); it != g_aiContextStack.rend(); ++it)
+    {
+        if (it->phase == AIPhase::CREW && it->crewAI) return it->crewAI;
+    }
+    return nullptr;
+}
+
+static CombatAI *GetCurrentCombatAI()
+{
+    for (auto it = g_aiContextStack.rbegin(); it != g_aiContextStack.rend(); ++it)
+    {
+        if (it->phase == AIPhase::COMBAT && it->combatAI) return it->combatAI;
+    }
+    return nullptr;
+}
+
 HOOK_METHOD(CApp, OnLoop, () -> void)
 {
     LOG_HOOK("HOOK_METHOD -> CApp::OnLoop -> Begin (InternalEvents.cpp)\n")
@@ -287,6 +359,498 @@ HOOK_METHOD_PRIORITY(ShipManager, OnLoop, -100, () -> void)
     lua_pop(context->GetLua(), 1);
 }
 
+HOOK_METHOD_PRIORITY(ShipAI, OnLoop, -10000, (bool hostile) -> void)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> ShipAI::OnLoop -> Begin (InternalEvents.cpp)\n")
+
+    auto context = G_->getLuaContext();
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->types.pShipAI, 0);
+    lua_pushboolean(context->GetLua(), hostile);
+    bool preempt = context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::SHIP_AI_PRE, 2, 0);
+
+    if (!preempt)
+    {
+        ScopedAIContext aiContext(AIPhase::SHIP, this);
+        super(hostile);
+    }
+
+    lua_pushboolean(context->GetLua(), preempt);
+    context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::SHIP_AI_POST, 3, 0);
+    lua_pop(context->GetLua(), 3);
+}
+
+HOOK_METHOD_PRIORITY(ShipAI, CheckPowerLevels, -10000, (bool hostile) -> void)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> ShipAI::CheckPowerLevels -> Begin (InternalEvents.cpp)\n")
+
+    auto context = G_->getLuaContext();
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->types.pShipAI, 0);
+    lua_pushboolean(context->GetLua(), hostile);
+    bool preempt = context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::SHIP_AI_POWER_PRE, 2, 0);
+
+    if (!preempt)
+    {
+        ScopedAIContext aiContext(AIPhase::POWER, this);
+        super(hostile);
+    }
+
+    lua_pushboolean(context->GetLua(), preempt);
+    context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::SHIP_AI_POWER_POST, 3, 0);
+    lua_pop(context->GetLua(), 3);
+}
+
+HOOK_METHOD_PRIORITY(CrewAI, OnLoop, -10000, () -> void)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> CrewAI::OnLoop -> Begin (InternalEvents.cpp)\n")
+
+    auto context = G_->getLuaContext();
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->types.pCrewAI, 0);
+    bool preempt = context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::CREW_AI_PRE, 1, 0);
+
+    if (!preempt)
+    {
+        ScopedAIContext aiContext(AIPhase::CREW, nullptr, this);
+        super();
+    }
+
+    lua_pushboolean(context->GetLua(), preempt);
+    context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::CREW_AI_POST, 2, 0);
+    lua_pop(context->GetLua(), 2);
+}
+
+HOOK_METHOD_PRIORITY(CombatAI, OnLoop, -10000, () -> void)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> CombatAI::OnLoop -> Begin (InternalEvents.cpp)\n")
+
+    auto context = G_->getLuaContext();
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->types.pCombatAI, 0);
+    bool preempt = context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::COMBAT_AI_PRE, 1, 0);
+
+    if (!preempt)
+    {
+        ScopedAIContext aiContext(AIPhase::COMBAT, nullptr, nullptr, this);
+        super();
+    }
+
+    lua_pushboolean(context->GetLua(), preempt);
+    context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::COMBAT_AI_POST, 2, 0);
+    lua_pop(context->GetLua(), 2);
+}
+
+HOOK_METHOD_PRIORITY(CombatAI, UpdateWeapons, -10000, () -> void)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> CombatAI::UpdateWeapons -> Begin (InternalEvents.cpp)\n")
+
+    auto context = G_->getLuaContext();
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->types.pCombatAI, 0);
+    bool preempt = context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::COMBAT_AI_WEAPONS_PRE, 1, 0);
+
+    if (!preempt)
+    {
+        ScopedAIContext aiContext(AIPhase::WEAPONS, nullptr, nullptr, this);
+        super();
+    }
+
+    lua_pushboolean(context->GetLua(), preempt);
+    context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::COMBAT_AI_WEAPONS_POST, 2, 0);
+    lua_pop(context->GetLua(), 2);
+}
+
+HOOK_METHOD_PRIORITY(CombatAI, UpdateMindControl, -10000, (bool hostile) -> void)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> CombatAI::UpdateMindControl -> Begin (InternalEvents.cpp)\n")
+
+    auto context = G_->getLuaContext();
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->types.pCombatAI, 0);
+    lua_pushboolean(context->GetLua(), hostile);
+    bool preempt = context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::COMBAT_AI_MIND_PRE, 2, 0);
+
+    if (!preempt)
+    {
+        ScopedAIContext aiContext(AIPhase::MIND, nullptr, nullptr, this);
+        super(hostile);
+    }
+
+    lua_pushboolean(context->GetLua(), preempt);
+    context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::COMBAT_AI_MIND_POST, 3, 0);
+    lua_pop(context->GetLua(), 3);
+}
+
+HOOK_METHOD_PRIORITY(ShipManager, SetCloaked, -10000, (bool cloaked) -> void)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> ShipManager::SetCloaked -> Begin (InternalEvents.cpp)\n")
+
+    CombatAI *ai = GetCurrentCombatAI();
+    if (!ai || ai->self != this || g_aiActionCallbackDepth > 0) return super(cloaked);
+
+    auto context = G_->getLuaContext();
+    SWIG_NewPointerObj(context->GetLua(), ai, context->getLibScript()->types.pCombatAI, 0);
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->types.pShipManager, 0);
+    lua_pushboolean(context->GetLua(), cloaked);
+    bool preempt;
+    {
+        ScopedAIActionCallback callbackGuard;
+        preempt = context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::COMBAT_AI_CLOAK_PRE, 3, 1);
+    }
+    if (lua_isboolean(context->GetLua(), -1)) cloaked = lua_toboolean(context->GetLua(), -1);
+    lua_pop(context->GetLua(), 3);
+
+    if (!preempt) super(cloaked);
+
+    SWIG_NewPointerObj(context->GetLua(), ai, context->getLibScript()->types.pCombatAI, 0);
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->types.pShipManager, 0);
+    lua_pushboolean(context->GetLua(), cloaked);
+    lua_pushboolean(context->GetLua(), preempt);
+    {
+        ScopedAIActionCallback callbackGuard;
+        context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::COMBAT_AI_CLOAK_POST, 4, 0);
+    }
+    lua_pop(context->GetLua(), 4);
+}
+
+HOOK_METHOD_PRIORITY(HackingSystem, StartHacking, -10000, (ShipSystem *targetSystem) -> void)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> HackingSystem::StartHacking -> Begin (InternalEvents.cpp)\n")
+
+    CombatAI *ai = GetCurrentCombatAI();
+    if (!ai || !ai->self || ai->self->hackingSystem != this || g_aiActionCallbackDepth > 0) return super(targetSystem);
+
+    auto context = G_->getLuaContext();
+    SWIG_NewPointerObj(context->GetLua(), ai, context->getLibScript()->types.pCombatAI, 0);
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->GetShipSystemType(SYS_HACKING), 0);
+    SWIG_NewPointerObj(context->GetLua(), targetSystem, context->getLibScript()->GetShipSystemType(targetSystem ? targetSystem->iSystemType : -1), 0);
+    bool preempt;
+    {
+        ScopedAIActionCallback callbackGuard;
+        preempt = context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::COMBAT_AI_HACK_START_PRE, 3, 1);
+    }
+    ShipSystem *replacement = nullptr;
+    if (SWIG_isptrtype(context->GetLua(), -1) &&
+        SWIG_IsOK(SWIG_ConvertPtr(context->GetLua(), -1, (void**)&replacement, context->getLibScript()->types.pShipSystem, 0)))
+    {
+        targetSystem = replacement;
+    }
+    lua_pop(context->GetLua(), 3);
+
+    if (!preempt && targetSystem) super(targetSystem);
+
+    SWIG_NewPointerObj(context->GetLua(), ai, context->getLibScript()->types.pCombatAI, 0);
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->GetShipSystemType(SYS_HACKING), 0);
+    SWIG_NewPointerObj(context->GetLua(), targetSystem, context->getLibScript()->GetShipSystemType(targetSystem ? targetSystem->iSystemType : -1), 0);
+    lua_pushboolean(context->GetLua(), preempt);
+    {
+        ScopedAIActionCallback callbackGuard;
+        context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::COMBAT_AI_HACK_START_POST, 4, 0);
+    }
+    lua_pop(context->GetLua(), 4);
+}
+
+HOOK_METHOD_PRIORITY(HackingSystem, InitiatePulse, -10000, () -> void)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> HackingSystem::InitiatePulse -> Begin (InternalEvents.cpp)\n")
+
+    CombatAI *ai = GetCurrentCombatAI();
+    if (!ai || !ai->self || ai->self->hackingSystem != this || g_aiActionCallbackDepth > 0) return super();
+
+    auto context = G_->getLuaContext();
+    SWIG_NewPointerObj(context->GetLua(), ai, context->getLibScript()->types.pCombatAI, 0);
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->GetShipSystemType(SYS_HACKING), 0);
+    bool preempt;
+    {
+        ScopedAIActionCallback callbackGuard;
+        preempt = context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::COMBAT_AI_HACK_PULSE_PRE, 2, 0);
+    }
+
+    if (!preempt) super();
+
+    lua_pushboolean(context->GetLua(), preempt);
+    {
+        ScopedAIActionCallback callbackGuard;
+        context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::COMBAT_AI_HACK_PULSE_POST, 3, 0);
+    }
+    lua_pop(context->GetLua(), 3);
+}
+
+HOOK_METHOD_PRIORITY(ShipAI, GetTeleportCommand, -10000, () -> std::pair<int, int>)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> ShipAI::GetTeleportCommand -> Begin (InternalEvents.cpp)\n")
+
+    if (g_aiActionCallbackDepth > 0) return super();
+
+    auto context = G_->getLuaContext();
+    int command = TeleportCommand::NONE;
+    int targetRoom = -1;
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->types.pShipAI, 0);
+    lua_pushinteger(context->GetLua(), command);
+    lua_pushinteger(context->GetLua(), targetRoom);
+    bool preempt;
+    {
+        ScopedAIActionCallback callbackGuard;
+        preempt = context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::SHIP_AI_TELEPORT_PRE, 3, 2);
+    }
+    if (lua_isnumber(context->GetLua(), -2)) command = static_cast<int>(lua_tointeger(context->GetLua(), -2));
+    if (lua_isnumber(context->GetLua(), -1)) targetRoom = static_cast<int>(lua_tointeger(context->GetLua(), -1));
+    lua_pop(context->GetLua(), 3);
+
+    if (!preempt)
+    {
+        std::pair<int, int> result = super();
+        command = result.first;
+        targetRoom = result.second;
+    }
+
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->types.pShipAI, 0);
+    lua_pushboolean(context->GetLua(), preempt);
+    lua_pushinteger(context->GetLua(), command);
+    lua_pushinteger(context->GetLua(), targetRoom);
+    {
+        ScopedAIActionCallback callbackGuard;
+        context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::SHIP_AI_TELEPORT_POST, 4, 2);
+    }
+    if (lua_isnumber(context->GetLua(), -2)) command = static_cast<int>(lua_tointeger(context->GetLua(), -2));
+    if (lua_isnumber(context->GetLua(), -1)) targetRoom = static_cast<int>(lua_tointeger(context->GetLua(), -1));
+    lua_pop(context->GetLua(), 4);
+    return {command, targetRoom};
+}
+
+static bool CallShipAIBoolPre(ShipAI *ai, InternalEvents::Identifiers event, bool &result)
+{
+    auto context = G_->getLuaContext();
+    SWIG_NewPointerObj(context->GetLua(), ai, context->getLibScript()->types.pShipAI, 0);
+    lua_pushboolean(context->GetLua(), result);
+    bool preempt;
+    {
+        ScopedAIActionCallback callbackGuard;
+        preempt = context->getLibScript()->call_on_internal_chain_event_callbacks(event, 2, 1);
+    }
+    if (lua_isboolean(context->GetLua(), -1)) result = lua_toboolean(context->GetLua(), -1);
+    lua_pop(context->GetLua(), 2);
+    return preempt;
+}
+
+static void CallShipAIBoolPost(ShipAI *ai, InternalEvents::Identifiers event, bool preempt, bool &result)
+{
+    auto context = G_->getLuaContext();
+    SWIG_NewPointerObj(context->GetLua(), ai, context->getLibScript()->types.pShipAI, 0);
+    lua_pushboolean(context->GetLua(), preempt);
+    lua_pushboolean(context->GetLua(), result);
+    {
+        ScopedAIActionCallback callbackGuard;
+        context->getLibScript()->call_on_internal_chain_event_callbacks(event, 3, 1);
+    }
+    if (lua_isboolean(context->GetLua(), -1)) result = lua_toboolean(context->GetLua(), -1);
+    lua_pop(context->GetLua(), 3);
+}
+
+HOOK_METHOD_PRIORITY(ShipAI, RequiredEvac, -10000, () -> bool)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> ShipAI::RequiredEvac -> Begin (InternalEvents.cpp)\n")
+    if (g_aiActionCallbackDepth > 0) return super();
+    bool result = false;
+    bool preempt = CallShipAIBoolPre(this, InternalEvents::SHIP_AI_EVAC_PRE, result);
+    if (!preempt) result = super();
+    CallShipAIBoolPost(this, InternalEvents::SHIP_AI_EVAC_POST, preempt, result);
+    return result;
+}
+
+HOOK_METHOD_PRIORITY(ShipAI, Surrender, -10000, () -> bool)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> ShipAI::Surrender -> Begin (InternalEvents.cpp)\n")
+    if (g_aiActionCallbackDepth > 0) return super();
+    bool result = false;
+    bool preempt = CallShipAIBoolPre(this, InternalEvents::SHIP_AI_SURRENDER_PRE, result);
+    if (!preempt) result = super();
+    CallShipAIBoolPost(this, InternalEvents::SHIP_AI_SURRENDER_POST, preempt, result);
+    return result;
+}
+
+HOOK_METHOD_PRIORITY(ShipAI, Escape, -10000, () -> bool)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> ShipAI::Escape -> Begin (InternalEvents.cpp)\n")
+    if (g_aiActionCallbackDepth > 0) return super();
+    bool result = false;
+    bool preempt = CallShipAIBoolPre(this, InternalEvents::SHIP_AI_ESCAPE_PRE, result);
+    if (!preempt) result = super();
+    CallShipAIBoolPost(this, InternalEvents::SHIP_AI_ESCAPE_POST, preempt, result);
+    return result;
+}
+
+static bool CallCrewAIPre(CrewAI *ai, InternalEvents::Identifiers event)
+{
+    auto context = G_->getLuaContext();
+    SWIG_NewPointerObj(context->GetLua(), ai, context->getLibScript()->types.pCrewAI, 0);
+    bool preempt;
+    {
+        ScopedAIActionCallback callbackGuard;
+        preempt = context->getLibScript()->call_on_internal_chain_event_callbacks(event, 1, 0);
+    }
+    lua_pop(context->GetLua(), 1);
+    return preempt;
+}
+
+static void CallCrewAIPost(CrewAI *ai, InternalEvents::Identifiers event, bool preempt)
+{
+    auto context = G_->getLuaContext();
+    SWIG_NewPointerObj(context->GetLua(), ai, context->getLibScript()->types.pCrewAI, 0);
+    lua_pushboolean(context->GetLua(), preempt);
+    {
+        ScopedAIActionCallback callbackGuard;
+        context->getLibScript()->call_on_internal_chain_event_callbacks(event, 2, 0);
+    }
+    lua_pop(context->GetLua(), 2);
+}
+
+HOOK_METHOD_PRIORITY(CrewAI, CheckForProblems, -10000, () -> void)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> CrewAI::CheckForProblems -> Begin (InternalEvents.cpp)\n")
+    if (GetCurrentCrewAI() != this || g_aiActionCallbackDepth > 0) return super();
+    bool preempt = CallCrewAIPre(this, InternalEvents::CREW_AI_PROBLEMS_PRE);
+    if (!preempt) super();
+    CallCrewAIPost(this, InternalEvents::CREW_AI_PROBLEMS_POST, preempt);
+}
+
+HOOK_METHOD_PRIORITY(CrewAI, UpdateIntruders, -10000, () -> void)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> CrewAI::UpdateIntruders -> Begin (InternalEvents.cpp)\n")
+    if (GetCurrentCrewAI() != this || g_aiActionCallbackDepth > 0) return super();
+    bool preempt = CallCrewAIPre(this, InternalEvents::CREW_AI_INTRUDERS_PRE);
+    if (!preempt) super();
+    CallCrewAIPost(this, InternalEvents::CREW_AI_INTRUDERS_POST, preempt);
+}
+
+HOOK_METHOD_PRIORITY(CrewAI, CheckForHealing, -10000, () -> void)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> CrewAI::CheckForHealing -> Begin (InternalEvents.cpp)\n")
+    if (GetCurrentCrewAI() != this || g_aiActionCallbackDepth > 0) return super();
+    bool preempt = CallCrewAIPre(this, InternalEvents::CREW_AI_HEALING_PRE);
+    if (!preempt) super();
+    CallCrewAIPost(this, InternalEvents::CREW_AI_HEALING_POST, preempt);
+}
+
+HOOK_METHOD_PRIORITY(CrewAI, UpdateDrones, -10000, () -> void)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> CrewAI::UpdateDrones -> Begin (InternalEvents.cpp)\n")
+    if (GetCurrentCrewAI() != this || g_aiActionCallbackDepth > 0) return super();
+    bool preempt = CallCrewAIPre(this, InternalEvents::CREW_AI_DRONES_PRE);
+    if (!preempt) super();
+    CallCrewAIPost(this, InternalEvents::CREW_AI_DRONES_POST, preempt);
+}
+
+HOOK_METHOD_PRIORITY(CrewAI, UpdateCrewMember, -10000, (int crewId) -> void)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> CrewAI::UpdateCrewMember -> Begin (InternalEvents.cpp)\n")
+    if (GetCurrentCrewAI() != this || g_aiActionCallbackDepth > 0 || crewId < 0 || crewId >= crewList.size()) return super(crewId);
+
+    CrewMember *crew = crewList[crewId];
+    auto context = G_->getLuaContext();
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->types.pCrewAI, 0);
+    SWIG_NewPointerObj(context->GetLua(), crew, context->getLibScript()->types.pCrewMember, 0);
+    lua_pushinteger(context->GetLua(), crewId);
+    bool preempt;
+    {
+        ScopedAIActionCallback callbackGuard;
+        preempt = context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::CREW_AI_MEMBER_PRE, 3, 0);
+    }
+
+    if (!preempt) super(crewId);
+
+    lua_pushboolean(context->GetLua(), preempt);
+    {
+        ScopedAIActionCallback callbackGuard;
+        context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::CREW_AI_MEMBER_POST, 4, 0);
+    }
+    lua_pop(context->GetLua(), 4);
+}
+
+HOOK_METHOD_PRIORITY(CrewAI, CloseAirlocks, -10000, () -> bool)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> CrewAI::CloseAirlocks -> Begin (InternalEvents.cpp)\n")
+    if (GetCurrentCrewAI() != this || g_aiActionCallbackDepth > 0) return super();
+
+    auto context = G_->getLuaContext();
+    bool result = false;
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->types.pCrewAI, 0);
+    lua_pushboolean(context->GetLua(), result);
+    bool preempt;
+    {
+        ScopedAIActionCallback callbackGuard;
+        preempt = context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::CREW_AI_DOORS_PRE, 2, 1);
+    }
+    if (lua_isboolean(context->GetLua(), -1)) result = lua_toboolean(context->GetLua(), -1);
+    lua_pop(context->GetLua(), 2);
+
+    if (!preempt) result = super();
+
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->types.pCrewAI, 0);
+    lua_pushboolean(context->GetLua(), preempt);
+    lua_pushboolean(context->GetLua(), result);
+    {
+        ScopedAIActionCallback callbackGuard;
+        context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::CREW_AI_DOORS_POST, 3, 1);
+    }
+    if (lua_isboolean(context->GetLua(), -1)) result = lua_toboolean(context->GetLua(), -1);
+    lua_pop(context->GetLua(), 3);
+    return result;
+}
+
+HOOK_METHOD_PRIORITY(CrewAI, SafeBlowoutOxygen, -10000, (int roomId) -> bool)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> CrewAI::SafeBlowoutOxygen -> Begin (InternalEvents.cpp)\n")
+    if (GetCurrentCrewAI() != this || g_aiActionCallbackDepth > 0) return super(roomId);
+
+    auto context = G_->getLuaContext();
+    bool result = false;
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->types.pCrewAI, 0);
+    lua_pushinteger(context->GetLua(), roomId);
+    lua_pushboolean(context->GetLua(), result);
+    bool preempt;
+    {
+        ScopedAIActionCallback callbackGuard;
+        preempt = context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::CREW_AI_AIRLOCK_PRE, 3, 1);
+    }
+    if (lua_isboolean(context->GetLua(), -1)) result = lua_toboolean(context->GetLua(), -1);
+    lua_pop(context->GetLua(), 3);
+
+    if (!preempt) result = super(roomId);
+
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->types.pCrewAI, 0);
+    lua_pushinteger(context->GetLua(), roomId);
+    lua_pushboolean(context->GetLua(), preempt);
+    lua_pushboolean(context->GetLua(), result);
+    {
+        ScopedAIActionCallback callbackGuard;
+        context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::CREW_AI_AIRLOCK_POST, 4, 1);
+    }
+    if (lua_isboolean(context->GetLua(), -1)) result = lua_toboolean(context->GetLua(), -1);
+    lua_pop(context->GetLua(), 4);
+    return result;
+}
+
+HOOK_METHOD_PRIORITY(ShipManager, JumpLeave, -10000, () -> void)
+{
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> ShipManager::JumpLeave -> Begin (InternalEvents.cpp)\n")
+    ShipAI *ai = GetCurrentShipAI();
+    if (!ai || ai->ship != this || g_aiActionCallbackDepth > 0) return super();
+
+    auto context = G_->getLuaContext();
+    SWIG_NewPointerObj(context->GetLua(), ai, context->getLibScript()->types.pShipAI, 0);
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->types.pShipManager, 0);
+    bool preempt;
+    {
+        ScopedAIActionCallback callbackGuard;
+        preempt = context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::SHIP_AI_JUMP_PRE, 2, 0);
+    }
+
+    if (!preempt) super();
+
+    lua_pushboolean(context->GetLua(), preempt);
+    {
+        ScopedAIActionCallback callbackGuard;
+        context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::SHIP_AI_JUMP_POST, 3, 0);
+    }
+    lua_pop(context->GetLua(), 3);
+}
+
 HOOK_METHOD_PRIORITY(WeaponControl, SelectArmament, -100, (unsigned int armamentSlot) -> void)
 {
     LOG_HOOK("HOOK_METHOD_PRIORITY -> WeaponControl::SelectArmament -> Begin (InternalEvents.cpp)\n")
@@ -392,13 +956,25 @@ HOOK_METHOD(DroneSystem, SetBonusPower, (int amount, int permanentPower) -> void
 }
 
 static bool inArtilleryLoop = false;
-HOOK_METHOD(ArtillerySystem, OnLoop, () -> void)
+HOOK_METHOD_PRIORITY(ArtillerySystem, OnLoop, -10000, () -> void)
 {
-    LOG_HOOK("HOOK_METHOD -> ArtillerySystem::OnLoop -> Begin (InternalEvents.cpp)\n")
+    LOG_HOOK("HOOK_METHOD_PRIORITY -> ArtillerySystem::OnLoop -> Begin (InternalEvents.cpp)\n")
 
-    inArtilleryLoop = true;
-    super();
-    inArtilleryLoop = false;
+    auto context = G_->getLuaContext();
+    SWIG_NewPointerObj(context->GetLua(), this, context->getLibScript()->GetShipSystemType(SYS_ARTILLERY), 0);
+    bool preempt = context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::ARTILLERY_AI_PRE, 1, 0);
+
+    if (!preempt)
+    {
+        ScopedAIContext aiContext(AIPhase::ARTILLERY, nullptr, nullptr, nullptr, this);
+        inArtilleryLoop = true;
+        super();
+        inArtilleryLoop = false;
+    }
+
+    lua_pushboolean(context->GetLua(), preempt);
+    context->getLibScript()->call_on_internal_chain_event_callbacks(InternalEvents::ARTILLERY_AI_POST, 2, 0);
+    lua_pop(context->GetLua(), 2);
 }
 HOOK_METHOD(ProjectileFactory, SetCooldownModifier, (float mod) -> void)
 {

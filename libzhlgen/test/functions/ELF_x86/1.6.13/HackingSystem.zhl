@@ -2,5 +2,9 @@
 cleanup __cdecl void HackingSystem::BlowHackingDrone(HackingSystem *this);
 "57565383ec308b5c2440891c24e8????????80bbbc01000000":
 cleanup __cdecl void HackingSystem::OnLoop(HackingSystem *this);
+"5383ec288b5c243080bb9801000000":
+cleanup __cdecl void HackingSystem::InitiatePulse(HackingSystem *this);
+"5383ec188b5c242080bb1806000000":
+cleanup __cdecl void HackingSystem::StartHacking(HackingSystem *this, ShipSystem *_sil__DO_NOT_USE_system);
 "5383ec??8b5c????80bb980100000075??83c4??31c05b":
 cleanup __cdecl bool HackingSystem::SoundLoop(HackingSystem *this);

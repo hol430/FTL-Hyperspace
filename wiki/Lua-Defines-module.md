@@ -77,6 +77,50 @@ _**NOTE:** Currently internal events do not expect any arguments or return value
 | CREW_LOOP | `CrewMember crew` | `None` | While unpaused, run code every in-game tick for each crew member |
 | CREW_CLONE | `CrewMember crew` | `None` | Called at the start of creating a `CrewMember` after the cloning process |
 | SHIP_LOOP | `ShipManager ship` | `None` | While unpaused, run code every in-game tick for each ship |
+| SHIP_AI_PRE | `ShipAI ai`, `bool hostile` | `Defines.Chain chain` | Called before the ship AI tick. Preempting skips the complete ship AI tick. |
+| SHIP_AI_POST | `ShipAI ai`, `bool hostile`, `bool preempted` | `Defines.Chain chain` | Called after the ship AI tick, including when it was preempted. |
+| SHIP_AI_POWER_PRE | `ShipAI ai`, `bool hostile` | `Defines.Chain chain` | Called before the ship AI allocates reactor, system, and weapon power. Preempting skips the allocation. |
+| SHIP_AI_POWER_POST | `ShipAI ai`, `bool hostile`, `bool preempted` | `Defines.Chain chain` | Called after ship AI power allocation, including when it was preempted. |
+| CREW_AI_PRE | `CrewAI ai` | `Defines.Chain chain` | Called before the crew AI tick. Preempting skips crew movement, repairs, intruder handling, healing, and door logic. |
+| CREW_AI_POST | `CrewAI ai`, `bool preempted` | `Defines.Chain chain` | Called after the crew AI tick, including when it was preempted. |
+| COMBAT_AI_PRE | `CombatAI ai` | `Defines.Chain chain` | Called before the combat AI tick. Preempting skips the complete combat AI tick. |
+| COMBAT_AI_POST | `CombatAI ai`, `bool preempted` | `Defines.Chain chain` | Called after the combat AI tick, including when it was preempted. |
+| COMBAT_AI_WEAPONS_PRE | `CombatAI ai` | `Defines.Chain chain` | Called before normal AI weapon targeting and firing. Preempting skips the update. |
+| COMBAT_AI_WEAPONS_POST | `CombatAI ai`, `bool preempted` | `Defines.Chain chain` | Called after normal AI weapon targeting and firing, including when it was preempted. |
+| COMBAT_AI_MIND_PRE | `CombatAI ai`, `bool hostile` | `Defines.Chain chain` | Called before the AI updates mind control. Preempting skips the update. |
+| COMBAT_AI_MIND_POST | `CombatAI ai`, `bool hostile`, `bool preempted` | `Defines.Chain chain` | Called after the AI updates mind control, including when it was preempted. |
+| ARTILLERY_AI_PRE | `ArtillerySystem artillery` | `Defines.Chain chain` | Called before autonomous artillery updates. Preempting skips the update. |
+| ARTILLERY_AI_POST | `ArtillerySystem artillery`, `bool preempted` | `Defines.Chain chain` | Called after autonomous artillery updates, including when they were preempted. |
+| COMBAT_AI_CLOAK_PRE | `CombatAI ai`, `ShipManager ship`, `bool cloaked` | `Defines.Chain chain`, `bool cloaked` | Called when combat AI attempts to change its cloak state. Only AI-originated calls are included. |
+| COMBAT_AI_CLOAK_POST | `CombatAI ai`, `ShipManager ship`, `bool cloaked`, `bool preempted` | `Defines.Chain chain` | Called after an AI-originated cloak attempt. |
+| COMBAT_AI_HACK_START_PRE | `CombatAI ai`, `HackingSystem hacking`, `ShipSystem target` | `Defines.Chain chain`, `ShipSystem target` | Called before combat AI launches a hacking drone. The target may be replaced. |
+| COMBAT_AI_HACK_START_POST | `CombatAI ai`, `HackingSystem hacking`, `ShipSystem target`, `bool preempted` | `Defines.Chain chain` | Called after an AI hacking-drone launch attempt. |
+| COMBAT_AI_HACK_PULSE_PRE | `CombatAI ai`, `HackingSystem hacking` | `Defines.Chain chain` | Called before combat AI initiates a hacking pulse. |
+| COMBAT_AI_HACK_PULSE_POST | `CombatAI ai`, `HackingSystem hacking`, `bool preempted` | `Defines.Chain chain` | Called after an AI hacking-pulse attempt. |
+| SHIP_AI_TELEPORT_PRE | `ShipAI ai`, `TeleportCommand command`, `int targetRoom` | `Defines.Chain chain`, `TeleportCommand command`, `int targetRoom` | Called before calculating the AI teleport command. Preempting uses the returned command and target room without running vanilla calculation side effects. |
+| SHIP_AI_TELEPORT_POST | `ShipAI ai`, `bool preempted`, `TeleportCommand command`, `int targetRoom` | `Defines.Chain chain`, `TeleportCommand command`, `int targetRoom` | Called with the final teleport command and may replace it. |
+| SHIP_AI_EVAC_PRE | `ShipAI ai`, `bool result` | `Defines.Chain chain`, `bool result` | Called before the AI determines whether crew evacuation is required. |
+| SHIP_AI_EVAC_POST | `ShipAI ai`, `bool preempted`, `bool result` | `Defines.Chain chain`, `bool result` | Called with the final evacuation decision and may replace it. |
+| SHIP_AI_SURRENDER_PRE | `ShipAI ai`, `bool result` | `Defines.Chain chain`, `bool result` | Called before the AI surrender decision. |
+| SHIP_AI_SURRENDER_POST | `ShipAI ai`, `bool preempted`, `bool result` | `Defines.Chain chain`, `bool result` | Called with the final surrender decision and may replace it. |
+| SHIP_AI_ESCAPE_PRE | `ShipAI ai`, `bool result` | `Defines.Chain chain`, `bool result` | Called before the AI escape decision. |
+| SHIP_AI_ESCAPE_POST | `ShipAI ai`, `bool preempted`, `bool result` | `Defines.Chain chain`, `bool result` | Called with the final escape decision and may replace it. |
+| SHIP_AI_JUMP_PRE | `ShipAI ai`, `ShipManager ship` | `Defines.Chain chain` | Called before an AI-controlled ship completes an escape jump. |
+| SHIP_AI_JUMP_POST | `ShipAI ai`, `ShipManager ship`, `bool preempted` | `Defines.Chain chain` | Called after an AI escape-jump attempt. |
+| CREW_AI_PROBLEMS_PRE | `CrewAI ai` | `Defines.Chain chain` | Called before crew AI scans for ship problems and creates desired tasks. |
+| CREW_AI_PROBLEMS_POST | `CrewAI ai`, `bool preempted` | `Defines.Chain chain` | Called after the crew problem scan. |
+| CREW_AI_MEMBER_PRE | `CrewAI ai`, `CrewMember crew`, `int crewId` | `Defines.Chain chain` | Called before AI updates an individual crew member's movement and task. |
+| CREW_AI_MEMBER_POST | `CrewAI ai`, `CrewMember crew`, `int crewId`, `bool preempted` | `Defines.Chain chain` | Called after an individual crew AI update. |
+| CREW_AI_INTRUDERS_PRE | `CrewAI ai` | `Defines.Chain chain` | Called before crew AI updates its intruder response. |
+| CREW_AI_INTRUDERS_POST | `CrewAI ai`, `bool preempted` | `Defines.Chain chain` | Called after the intruder response update. |
+| CREW_AI_HEALING_PRE | `CrewAI ai` | `Defines.Chain chain` | Called before crew AI assigns healing behavior. |
+| CREW_AI_HEALING_POST | `CrewAI ai`, `bool preempted` | `Defines.Chain chain` | Called after healing behavior is assigned. |
+| CREW_AI_DOORS_PRE | `CrewAI ai`, `bool result` | `Defines.Chain chain`, `bool result` | Called before crew AI closes airlocks. |
+| CREW_AI_DOORS_POST | `CrewAI ai`, `bool preempted`, `bool result` | `Defines.Chain chain`, `bool result` | Called with the result of closing airlocks and may replace it. |
+| CREW_AI_AIRLOCK_PRE | `CrewAI ai`, `int roomId`, `bool result` | `Defines.Chain chain`, `bool result` | Called before crew AI decides whether a room can safely be vented. |
+| CREW_AI_AIRLOCK_POST | `CrewAI ai`, `int roomId`, `bool preempted`, `bool result` | `Defines.Chain chain`, `bool result` | Called with the final safe-venting decision and may replace it. |
+| CREW_AI_DRONES_PRE | `CrewAI ai` | `Defines.Chain chain` | Called before crew AI updates onboard crew drones. |
+| CREW_AI_DRONES_POST | `CrewAI ai`, `bool preempted` | `Defines.Chain chain` | Called after onboard crew-drone AI updates. |
 | HAS_EQUIPMENT | `ShipManager ship`, `string equipment`, `int value` | `Defines.Chain chain`, `int value` | Run every hasEquipment check |
 | HAS_AUGMENTATION | `ShipManager ship`, `string augment`, `int value` | `Defines.Chain chain`, `int value` | Run every hasAugmentation check |
 | GET_AUGMENTATION_VALUE | `ShipManager ship`, `string augment`, `float value` | `Defines.Chain chain`, `float value` | Called when checking an augmentation's value |
@@ -162,6 +206,16 @@ For example `Defines.Evasion.HIT`
 | NONE | Indicates evasion still needs to be checked |
 | HIT | Force projectile to hit |
 | MISS | Force projectile to miss |
+
+### TeleportCommand
+
+Used by the ship AI teleport hooks and `ShipManager:InitiateTeleport(targetRoom, command)`.
+
+| Name | Description |
+| :--- | --- |
+| NONE | Do not teleport. |
+| LEAVE | Send crew to the opposing ship. A target room of `-1` selects a random room. |
+| ARRIVE | Recall crew to this ship. |
 
 ### BeamHit
 Used by beam damage callbacks to determine what type of hit is currently being processed.
@@ -316,4 +370,3 @@ For example `Defines.SDL.KEY_AMPERSAND`(equivalent to 38)
 | KEY_x | 120 | x key |
 | KEY_y | 121 | y key |
 | KEY_z | 122 | z key |
-
