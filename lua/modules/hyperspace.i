@@ -3046,6 +3046,14 @@ We can expose them once the root cause is identified and the crash is fixed.
 %rename("%s") Blueprint::desc;
 %rename("%s") Blueprint::type;
 
+%defaultctor Path;
+%defaultdtor Path;
+%rename("%s") Path;
+%rename("%s") Path::start;
+%rename("%s") Path::doors;
+%rename("%s") Path::finish;
+%rename("%s") Path::distance;
+
 %rename("%s") ShipGraph;
 %nodefaultctor ShipGraph;
 %nodefaultdtor ShipGraph;

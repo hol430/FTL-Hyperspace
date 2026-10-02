@@ -3410,6 +3410,19 @@ Accessed via `Hyperspace.CustomAugmentManager.GetInstance()`
 - [`Description`](#Description) `.desc`
 - `int` `.type`
 
+## Path
+
+Returned by `ShipGraph:FindPath()` and `ShipGraph:Dijkstra()`, and accessed through `CrewMember.path`.
+
+### Static Methods
+- [`Path`](#Path) `Hyperspace.Path()` Constructor
+
+### Fields
+- [`Point`](#Point) `.start`
+- `std::vector<Door*>` `.doors` (uses `vector_Door`)
+- [`Point`](#Point) `.finish`
+- `float` `.distance`
+
 ## ShipGraph
 
 Accessed via `Hyperspace.ShipGraph.GetShipInfo(int shipId)`
